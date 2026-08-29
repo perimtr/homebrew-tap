@@ -1,0 +1,43 @@
+name: Update cask
+
+# Follows new PowerMate releases: reads the latest tag, checksums the
+# disk image, and commits the new version. Runs daily, and can be run by
+# hand right after cutting a release instead of waiting for the schedule.
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Follow the latest release
+        run: |
+          set -euo pipefail
+          tag=$(curl -fsSL https://api.github.com/repos/perimtr/powermate/releases/latest \
+            | jq -r .tag_name)
+          version="${tag#v}"
+          current=$(awk -F'"' '/^  version /{print $2}' Casks/powermate.rb)
+          if [ "$version" = "$current" ]; then
+            echo "cask is already at $version"
+            exit 0
+          fi
+          url="https://github.com/perimtr/powermate/releases/download/${tag}/PowerMate-${version}.dmg"
+          curl -fsSL -o powermate.dmg "$url"
+          sha=$(shasum -a 256 powermate.dmg | cut -d' ' -f1)
+          rm powermate.dmg
+          sed -i '' \
+            -e "s/^  version \".*\"/  version \"${version}\"/" \
+            -e "s/^  sha256 \".*\"/  sha256 \"${sha}\"/" \
+            Casks/powermate.rb
+          git config user.name "Perimtr LLC"
+          git config user.email "noreply@perimtr.io"
+          git add Casks/powermate.rb
+          git commit -m "PowerMate ${version}"
+          git push
+          echo "updated cask from ${current:-none} to ${version}"
