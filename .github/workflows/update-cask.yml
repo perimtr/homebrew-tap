@@ -17,18 +17,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Follow the latest release
+        # Authenticated through gh. Anonymous API calls share one rate
+        # limit per runner IP with every other tenant on that runner, so
+        # the unauthenticated curl this used to make failed with 403
+        # about every other day; the workflow token gets its own quota.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag=$(curl -fsSL https://api.github.com/repos/perimtr/powermate/releases/latest \
-            | jq -r .tag_name)
+          tag=$(gh release view --repo perimtr/powermate --json tagName --jq .tagName)
           version="${tag#v}"
           current=$(awk -F'"' '/^  version /{print $2}' Casks/powermate.rb)
           if [ "$version" = "$current" ]; then
             echo "cask is already at $version"
             exit 0
           fi
-          url="https://github.com/perimtr/powermate/releases/download/${tag}/PowerMate-${version}.dmg"
-          curl -fsSL -o powermate.dmg "$url"
+          gh release download "$tag" --repo perimtr/powermate \
+            --pattern "PowerMate-${version}.dmg" --output powermate.dmg
           sha=$(shasum -a 256 powermate.dmg | cut -d' ' -f1)
           rm powermate.dmg
           sed -i '' \
