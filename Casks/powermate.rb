@@ -1,6 +1,6 @@
 cask "powermate" do
-  version "1.5"
-  sha256 "2e249414fdaa53a262d7eb89ea352ea6b394ca6c4abf465fadc5c88a1498f21d"
+  version "1.6"
+  sha256 "603a3789ea882ba01412275ecad2ffeeea30d3fb6857cee06785820a3cd1d3cb"
 
   url "https://github.com/perimtr/powermate/releases/download/v#{version}/PowerMate-#{version}.dmg",
       verified: "github.com/perimtr/powermate/"
